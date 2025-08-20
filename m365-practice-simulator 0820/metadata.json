@@ -1,0 +1,7 @@
+{
+  "name": "Call Center Practice Simulator",
+  "description": "An application for call center agents to practice handling customer support scenarios with voice recognition and guided call flows.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
