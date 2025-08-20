@@ -34,24 +34,33 @@ export default async function handler(request: Request) {
 
   try {
     const body: ApiRequest = await request.json();
-    const model = ai.models['gemini-2.5-flash']; // Not a function call
-
     let responseText = "";
 
     if (body.type === 'chat' && body.systemInstruction) {
+        // The entire transcript is coming in, including the latest user message.
+        // We need to separate the history from the last message.
+        const history = body.transcript.slice(0, -1);
+        const lastMessagePart = body.transcript[body.transcript.length - 1];
+
+        // The last message should be from the 'user' (the agent)
+        if (!lastMessagePart || lastMessagePart.role !== 'user') {
+             throw new Error("No valid user message found to send.");
+        }
+        const lastMessage = lastMessagePart.parts[0]?.text || "";
+        
+        if (!lastMessage) {
+            throw new Error("The last message is empty.");
+        }
+
         const chat: Chat = ai.chats.create({
             model: 'gemini-2.5-flash',
             config: { systemInstruction: body.systemInstruction },
-            history: body.transcript,
+            history: history,
         });
-        // The last item in the transcript is the new message from the user
-        const lastMessage = body.transcript[body.transcript.length - 1]?.parts[0]?.text || "";
-        if (lastMessage) {
-            const result: GenerateContentResponse = await chat.sendMessage({ message: lastMessage });
-            responseText = result.text;
-        } else {
-            throw new Error("No message found to send.");
-        }
+        
+        const result: GenerateContentResponse = await chat.sendMessage({ message: lastMessage });
+        responseText = result.text;
+
     } else if (body.type === 'suggestion' && body.prompt) {
         const result = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: body.prompt });
         responseText = result.text;
